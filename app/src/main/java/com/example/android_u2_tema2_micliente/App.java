@@ -19,6 +19,8 @@ public class App extends Application {
     catch (Exception e){
     }
   }
+
+  //RETORNA LA SOLICITUD
   public static Socket getSocket() {
     return mSocket;
   }

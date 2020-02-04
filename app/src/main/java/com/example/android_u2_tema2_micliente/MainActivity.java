@@ -1,8 +1,10 @@
 package com.example.android_u2_tema2_micliente;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -13,13 +15,17 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import io.socket.client.Ack;
 import io.socket.client.Socket;
+import io.socket.emitter.Emitter;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
 
@@ -35,9 +41,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     mapFragment.getMapAsync(this);
 
     mSocket = App.getSocket();
-//mSocket.on("taxiencontrado", taxiencontrado);
-//mSocket.on("localizacion",localizacion);
-//mSocket.on("Abordo",abordo);
+    //descomentamos los tres metodos
+    mSocket.on("taxiencontrado", taxiencontrado);
+    mSocket.on("localizacion",localizacion);
+    mSocket.on("Abordo",abordo);
     mSocket.connect();
 
   }
@@ -63,6 +70,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
       } catch (JSONException e) {
         Log.e("JSONExceptionPresenter", e.toString());
       }
+      //el ack me permite ver la respuesta
       mSocket.emit("pedirtaxi", miubicacion, new Ack() {
         @Override
         public void call(Object... args) {
@@ -75,4 +83,95 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     else
       Toast.makeText(this,"no se ha encontrado su ubicación",Toast.LENGTH_SHORT).show();
   }
+
+  //se agrego estos metodos
+
+  String miconductor="";
+  private Emitter.Listener taxiencontrado = new Emitter.Listener() {
+    @Override
+    public void call(Object... args) {
+      Log.i("misdatos","taxiencontrado");
+      final JSONObject paramsRequest = (JSONObject) args[0];
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            Log.i("misdatos","check:"+paramsRequest);
+            miconductor = paramsRequest.getString("datotaxi");
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder.setMessage("Felicidades el señor " + miconductor + " atendera su pedido")
+                .setTitle("Conductor encontrado")
+                .setCancelable(false)
+                .setNeutralButton("Aceptar",
+                    new DialogInterface.OnClickListener() {
+                      public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                      }
+                    });
+            AlertDialog alert = builder.create();
+            alert.show();
+          } catch(
+              JSONException e)
+          {
+            Log.e("JSONException", e.toString());
+          }
+        }
+      });
+    }
+  };
+
+  Marker mimarker;
+  private Emitter.Listener localizacion = new Emitter.Listener() {
+    @Override
+    public void call(Object... args) {
+      Log.i("localizacion","nuevalocalizacion");
+      JSONObject paramsRequest = (JSONObject) args[0];
+      final Double latcond,loncond;
+      try {
+        Log.i("localizacion","nuevalocalizacion:"+paramsRequest.toString());
+        latcond = paramsRequest.getDouble("lat");
+        loncond = paramsRequest.getDouble("lon");
+        runOnUiThread(new Runnable() {
+          @Override
+          public void run() {
+            if(mimarker!=null)
+            {
+              mimarker.remove();
+            }
+            mimarker= mapa.addMarker(new MarkerOptions().position(new LatLng(latcond, loncond))
+                .icon(BitmapDescriptorFactory
+                    .defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)).title(miconductor));
+          }
+        });
+      } catch (JSONException e) {
+        Log.e("JSONException", e.toString());
+      }
+    }
+  };
+
+
+  private Emitter.Listener abordo = new Emitter.Listener() {
+    @Override
+    public void call(Object... args) {
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+          builder.setMessage("Que tenga un buen viaje")
+              .setTitle("Gracias por su preferencia")
+              .setCancelable(false)
+              .setNeutralButton("Aceptar",
+                  new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                      dialog.cancel();
+                    }
+                  });
+          AlertDialog alert = builder.create();
+          alert.show();
+        }
+      });
+    }
+  };
+
+
 }
