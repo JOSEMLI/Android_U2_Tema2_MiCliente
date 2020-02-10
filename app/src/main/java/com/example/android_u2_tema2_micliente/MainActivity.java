@@ -6,6 +6,7 @@ import androidx.core.content.ContextCompat;
 
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -32,6 +33,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
   Socket mSocket;
   LatLng pos;
   GoogleMap mapa;
+
+
+  MediaPlayer mp;
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -45,6 +50,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     mSocket.on("taxiencontrado", taxiencontrado);
     mSocket.on("localizacion",localizacion);
     mSocket.on("Abordo",abordo);
+    mSocket.on("Enviarmensaje", enviarmensaje);
+    mSocket.on("mensajecliente", mensajecliente);
     mSocket.connect();
 
   }
@@ -140,7 +147,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
             mimarker= mapa.addMarker(new MarkerOptions().position(new LatLng(latcond, loncond))
                 .icon(BitmapDescriptorFactory
-                    .defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)).title(miconductor));
+                    .defaultMarker(BitmapDescriptorFactory.HUE_VIOLET)).title(miconductor));
           }
         });
       } catch (JSONException e) {
@@ -157,6 +164,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         @Override
         public void run() {
           AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+          mp = MediaPlayer.create(MainActivity.this, R.raw.musica);
+
+          mp.start();
           builder.setMessage("Que tenga un buen viaje")
               .setTitle("Gracias por su preferencia")
               .setCancelable(false)
@@ -173,5 +183,55 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
   };
 
+  private Emitter.Listener enviarmensaje = new Emitter.Listener() {
+    @Override
+    public void call(Object... args) {
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+          mp = MediaPlayer.create(MainActivity.this, R.raw.musica);
+
+          mp.start();
+          builder.setMessage("El conductor se esta acercando")
+                  .setTitle("Mensaje")
+                  .setCancelable(false)
+                  .setNeutralButton("Aceptar",
+                          new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                              dialog.cancel();
+                              mp.stop();
+                            }
+                          });
+          AlertDialog alert = builder.create();
+          alert.show();
+        }
+      });
+    }
+  };
+
+
+    private Emitter.Listener mensajecliente = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                    builder.setMessage("El coductor se encuentra cerca ...")
+                            .setTitle("Mensaje Al Cliente")
+                            .setCancelable(false)
+                            .setNeutralButton("Aceptar",
+                                    new DialogInterface.OnClickListener() {
+                                        public void onClick(DialogInterface dialog, int id) {
+                                            dialog.cancel();
+                                        }
+                                    });
+                    AlertDialog alert = builder.create();
+                    alert.show();
+                }
+            });
+        }
+    };
 
 }
